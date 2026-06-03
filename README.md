@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # 🌑 StellarVeil
 
@@ -257,4 +257,3 @@ Built with ❤️ at **Build On Stellar Hackathon — India Blockchain Week 2026
 <div align="center">
   <sub>StellarVeil — Privacy + Compliance, Together</sub>
 </div>
-]]>

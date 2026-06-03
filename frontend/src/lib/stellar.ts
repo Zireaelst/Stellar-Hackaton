@@ -57,14 +57,7 @@ export async function connectWallet(): Promise<string> {
     );
   }
 
-  const addressResult = await freighter.getAddress();
-  if ("error" in addressResult && addressResult.error) {
-    throw new Error(
-      `Failed to retrieve address from Freighter: ${addressResult.error}`
-    );
-  }
-
-  const address = addressResult.address;
+  const address = await freighter.getPublicKey();
   if (!address) {
     throw new Error("No address returned from Freighter");
   }
@@ -160,23 +153,16 @@ async function invokeContract(
 
   // Sign with Freighter
   const freighter = await import("@stellar/freighter-api");
-  const signResult = await freighter.signTransaction(
+  const signedXDR = await freighter.signTransaction(
     assembled.toXDR(),
     {
       networkPassphrase: NETWORK_PASSPHRASE,
     }
   );
 
-  if ("error" in signResult && signResult.error) {
-    throw new Error(
-      `Freighter signing failed: ${signResult.error}`
-    );
+  if (!signedXDR) {
+    throw new Error("Freighter signing failed: empty signature returned");
   }
-
-  const signedXDR =
-    typeof signResult === "string"
-      ? signResult
-      : signResult.signedTxXdr;
 
   const signedTx = StellarSdk.TransactionBuilder.fromXDR(
     signedXDR,
@@ -317,7 +303,7 @@ export async function getContractStats(): Promise<ContractStats> {
     const totalLockedEntry = await server.getContractData(
       contract.address(),
       totalLockedKey,
-      StellarSdk.Durability.Persistent
+      StellarSdk.SorobanRpc.Durability.Persistent
     );
     const totalLockedRaw = totalLockedEntry.val
       .contractData()
@@ -331,7 +317,7 @@ export async function getContractStats(): Promise<ContractStats> {
     const depositCountEntry = await server.getContractData(
       contract.address(),
       depositCountKey,
-      StellarSdk.Durability.Persistent
+      StellarSdk.SorobanRpc.Durability.Persistent
     );
     const depositCountRaw = depositCountEntry.val
       .contractData()
@@ -345,7 +331,7 @@ export async function getContractStats(): Promise<ContractStats> {
     const rootEntry = await server.getContractData(
       contract.address(),
       rootKey,
-      StellarSdk.Durability.Persistent
+      StellarSdk.SorobanRpc.Durability.Persistent
     );
     const rootRaw = rootEntry.val.contractData().val();
     const rootBytes = StellarSdk.scValToNative(rootRaw);
@@ -387,7 +373,7 @@ export async function getLeaves(): Promise<string[]> {
     const leavesEntry = await server.getContractData(
       contract.address(),
       leavesKey,
-      StellarSdk.Durability.Persistent
+      StellarSdk.SorobanRpc.Durability.Persistent
     );
     const leavesRaw = leavesEntry.val.contractData().val();
     const leavesNative = StellarSdk.scValToNative(leavesRaw);
@@ -424,7 +410,7 @@ export async function getBadSet(): Promise<string[]> {
     const badSetEntry = await server.getContractData(
       contract.address(),
       badSetKey,
-      StellarSdk.Durability.Persistent
+      StellarSdk.SorobanRpc.Durability.Persistent
     );
     const badSetRaw = badSetEntry.val.contractData().val();
     const badSetNative = StellarSdk.scValToNative(badSetRaw);

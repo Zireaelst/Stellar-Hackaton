@@ -11,7 +11,7 @@ function truncateHash(hash: string, front = 8, back = 6): string {
 }
 
 export function AssociationSetsSidebar() {
-  const { leaves, badSet } = useStore();
+  const { leaves, badSet, walletAddress } = useStore();
   const [operatorOpen, setOperatorOpen] = useState(false);
   const [newCommitment, setNewCommitment] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -25,7 +25,12 @@ export function AssociationSetsSidebar() {
     setAddError(null);
     setAddSuccess(false);
     try {
-      await addToBadSet(newCommitment.trim());
+      if (!walletAddress) {
+        setAddError('Please connect your wallet first.');
+        setIsAdding(false);
+        return;
+      }
+      await addToBadSet(newCommitment.trim(), walletAddress);
       setAddSuccess(true);
       setNewCommitment('');
       setTimeout(() => setAddSuccess(false), 3000);
@@ -89,7 +94,7 @@ export function AssociationSetsSidebar() {
               <span className="font-dm text-xs text-white/20">No deposits yet</span>
             </div>
           ) : (
-            leaves.map((commitment, index) => (
+            leaves.map((commitment: string, index: number) => (
               <motion.div
                 key={commitment}
                 initial={{ opacity: 0, x: -8 }}
@@ -131,7 +136,7 @@ export function AssociationSetsSidebar() {
               <span className="font-dm text-xs text-white/20">No flagged commitments</span>
             </div>
           ) : (
-            badSet.map((commitment, index) => (
+            badSet.map((commitment: string, index: number) => (
               <motion.div
                 key={commitment}
                 initial={{ opacity: 0, x: -8 }}

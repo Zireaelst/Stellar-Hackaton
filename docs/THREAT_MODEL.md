@@ -1,4 +1,4 @@
-<![CDATA[# StellarVeil — Threat Model
+# StellarVeil — Threat Model
 
 ## Overview
 
@@ -190,4 +190,4 @@ This document analyzes the security threats, attack vectors, and mitigations for
 6. **Implement rate limiting on deposits to prevent spam**
 7. **Add relay network for withdrawal submission (hide IP)**
 8. **Implement compliance dashboard for regulatory reporting**
-]]>
+

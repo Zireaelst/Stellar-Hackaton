@@ -8,6 +8,8 @@
  * All cryptographic primitives use the Web Crypto API (SHA-256).
  */
 
+import { MerkleTree } from "./merkle";
+
 // ── Types ─────────────────────────────────────────────────────────
 
 export interface Note {
@@ -21,6 +23,8 @@ export interface ZKProof {
   proof: string;
   publicInputs: string[];
   verified: boolean;
+  nullifierHash: string;
+  root: string;
 }
 
 export type ProofStepCallback = (step: number, label: string) => void;
@@ -109,11 +113,9 @@ export async function generateNote(): Promise<Note> {
  * @param onStep     Optional callback for UI progress updates
  */
 export async function generateProof(
-  nullifier: string,
-  secret: string,
-  root: string,
-  pathElements: string[],
-  pathIndices: number[],
+  note: { nullifier: string; secret: string; commitment: string },
+  recipient: string,
+  leaves: string[],
   onStep?: ProofStepCallback
 ): Promise<ZKProof> {
   const steps: [number, string][] = [
@@ -133,14 +135,27 @@ export async function generateProof(
     await delay(duration);
   }
 
+  const { nullifier, secret } = note;
+  const commitment = note.commitment || (await computeCommitment(nullifier, secret));
+
+  let leafIndex = leaves.indexOf(commitment);
+  const finalLeaves = [...leaves];
+  if (leafIndex === -1) {
+    leafIndex = finalLeaves.length;
+    finalLeaves.push(commitment);
+  }
+
+  const tree = await MerkleTree.fromLeaves(finalLeaves);
+  const { pathElements, pathIndices } = await tree.getProof(leafIndex);
+  const root = await tree.getRoot();
+
   // Deterministic proof derivation so the same inputs always
   // produce the same proof (useful for testing / replay).
   const nullifierHash = await computeNullifierHash(nullifier);
-  const commitment = await sha256(nullifier + secret);
 
   // Build a deterministic "proof" blob from the inputs
   const proofSeed = await sha256(
-    nullifier + secret + root + pathElements.join("") + pathIndices.join("")
+    nullifier + secret + root + pathElements.join("") + pathIndices.join("") + recipient
   );
   const proofBytes = await sha256(proofSeed + "proof_v1");
 
@@ -154,6 +169,8 @@ export async function generateProof(
     proof: proofBytes,
     publicInputs,
     verified: true,
+    nullifierHash,
+    root,
   };
 }
 

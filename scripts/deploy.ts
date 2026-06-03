@@ -1,4 +1,4 @@
-<![CDATA[#!/usr/bin/env npx ts-node
+#!/usr/bin/env npx ts-node
 
 /**
  * StellarVeil — Contract Deployment Script
@@ -224,4 +224,4 @@ main().catch((err) => {
   console.error("\n  ✗ Deployment failed:", err.message);
   process.exit(1);
 });
-]]>
+

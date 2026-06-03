@@ -10,7 +10,7 @@ export const RPC_URL = "https://soroban-testnet.stellar.org";
 export const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 
 /** Fixed deposit denomination in stroops (100 XLM). */
-export const DENOMINATION_STROOPS = 1_000_000_000n;
+export const DENOMINATION_STROOPS = BigInt("1000000000");
 
 /** Fixed deposit denomination in XLM. */
 export const DENOMINATION_XLM = 100;

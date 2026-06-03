@@ -91,6 +91,7 @@ export function WithdrawFlow() {
         nullifier: nullifierInput.trim(),
         secret: secretInput.trim(),
         commitment: '', // Will be computed
+        timestamp: Date.now(),
       };
 
       if (!note) {
@@ -98,7 +99,7 @@ export function WithdrawFlow() {
       }
 
       const currentLeaves = leaves.length > 0 ? leaves : await getLeaves();
-      const generatedProof = await generateProof(noteObj, recipientAddress, currentLeaves);
+      const generatedProof = await generateProof(noteObj, recipientAddress, currentLeaves, setProofStep);
       setProof(generatedProof);
       setProofGenerated(true);
     } catch (err) {
@@ -121,7 +122,7 @@ export function WithdrawFlow() {
     setWithdrawSuccess(false);
 
     try {
-      const result = await withdraw(proof, recipientAddress);
+      const result = await withdraw(proof.nullifierHash, recipientAddress, proof.root, walletAddress!);
       setTxHash(result);
       setWithdrawSuccess(true);
     } catch (err) {

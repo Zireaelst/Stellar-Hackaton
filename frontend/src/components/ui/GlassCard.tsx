@@ -10,7 +10,7 @@ interface GlassCardProps {
   onClick?: () => void;
 }
 
-export default function GlassCard({
+export function GlassCard({
   children,
   className = '',
   glowing = false,
@@ -40,3 +40,5 @@ export default function GlassCard({
     </motion.div>
   );
 }
+
+export default GlassCard;

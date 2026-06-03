@@ -7,6 +7,7 @@
 
 import { create } from "zustand";
 import type { Note, ZKProof } from "@/lib/zk";
+import { connectWallet, getBalance, getContractStats, getLeaves, getBadSet } from "@/lib/stellar";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -85,6 +86,19 @@ export interface StoreState {
   showNoteModal: boolean;
   showSuccessModal: boolean;
   isMobileMenuOpen: boolean;
+
+  // ── Missing / Compatible state properties ───────────────────
+  isConnected: boolean;
+  note: Note | null;
+  proof: ZKProof | null;
+  isGeneratingProof: boolean;
+  txHash: string | null;
+  isLoading: boolean;
+  error: string | null;
+  leaves: string[];
+  badSet: string[];
+  stats: { totalDeposits: number; totalWithdrawals: number } | null;
+  hasDepositedNote: boolean;
 }
 
 export interface StoreActions {
@@ -133,6 +147,14 @@ export interface StoreActions {
 
   // ── Compound actions ────────────────────────────────────────
   reset: () => void;
+
+  // ── Missing / Compatible actions ───────────────────────────
+  connect: () => Promise<void>;
+  refreshStats: () => Promise<void>;
+  setNote: (note: Note | null) => void;
+  setProof: (proof: ZKProof | null) => void;
+  setTxHash: (hash: string | null) => void;
+  setError: (error: string | null) => void;
 }
 
 // ── Initial state ─────────────────────────────────────────────────
@@ -176,6 +198,18 @@ const initialState: StoreState = {
   showNoteModal: false,
   showSuccessModal: false,
   isMobileMenuOpen: false,
+
+  isConnected: false,
+  note: null,
+  proof: null,
+  isGeneratingProof: false,
+  txHash: null,
+  isLoading: false,
+  error: null,
+  leaves: [],
+  badSet: [],
+  stats: null,
+  hasDepositedNote: false,
 };
 
 // ── Store ─────────────────────────────────────────────────────────
@@ -201,6 +235,7 @@ export const useStore = create<StoreState & StoreActions>((set, get) => ({
       walletBalance: 0,
       walletError: null,
       isConnecting: false,
+      isConnected: false,
     }),
 
   // ── Tab actions ─────────────────────────────────────────────
@@ -240,9 +275,18 @@ export const useStore = create<StoreState & StoreActions>((set, get) => ({
   setProofStatus: (status) => set({ proofStatus: status }),
 
   setProofStep: (step, label) =>
-    set({ proofStep: step, proofStepLabel: label }),
+    set({
+      proofStep: step,
+      proofStepLabel: label,
+      isGeneratingProof: step >= 0,
+    }),
 
-  setCurrentProof: (proof) => set({ currentProof: proof }),
+  setCurrentProof: (proof) =>
+    set({
+      currentProof: proof,
+      proof,
+      isGeneratingProof: false,
+    }),
 
   setRecipientAddress: (address) =>
     set({ recipientAddress: address }),
@@ -296,6 +340,92 @@ export const useStore = create<StoreState & StoreActions>((set, get) => ({
   setShowSuccessModal: (show) => set({ showSuccessModal: show }),
 
   setIsMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
+
+  // ── Missing / Compatible actions implementation ────────────
+  connect: async () => {
+    set({ isConnecting: true, walletError: null });
+    try {
+      const address = await connectWallet();
+      const balance = await getBalance(address);
+      set({
+        walletAddress: address,
+        walletBalance: balance,
+        isConnected: true,
+        isConnecting: false,
+      });
+      await get().refreshStats();
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Failed to connect wallet";
+      set({ walletError: errMsg, isConnecting: false, isConnected: false });
+      throw err;
+    }
+  },
+
+  refreshStats: async () => {
+    set({ isLoadingContractData: true });
+    try {
+      const contractStats = await getContractStats();
+      const leaves = await getLeaves();
+      const badSet = await getBadSet();
+
+      const totalDeposits = contractStats.depositCount;
+      const currentLocked = contractStats.totalLocked;
+      const totalWithdrawals = Math.max(0, totalDeposits - Math.floor(currentLocked / 100));
+
+      set({
+        contractData: {
+          totalLocked: currentLocked,
+          depositCount: totalDeposits,
+          root: contractStats.root,
+          leaves,
+          badSet,
+          lastUpdated: Date.now(),
+        },
+        leaves,
+        badSet,
+        stats: {
+          totalDeposits,
+          totalWithdrawals,
+        },
+        isLoadingContractData: false,
+      });
+    } catch (err) {
+      console.error("Failed to refresh stats:", err);
+      set({ isLoadingContractData: false });
+    }
+  },
+
+  setNote: (note) =>
+    set({
+      note,
+      currentNote: note,
+      isLoading: false,
+    }),
+
+  setProof: (proof) =>
+    set({
+      proof,
+      currentProof: proof,
+      isGeneratingProof: false,
+      isLoading: false,
+    }),
+
+  setTxHash: (hash) =>
+    set({
+      txHash: hash,
+      depositTxHash: hash,
+      withdrawTxHash: hash,
+      isLoading: false,
+    }),
+
+  setError: (error) =>
+    set({
+      error,
+      depositError: error,
+      withdrawError: error,
+      isLoading: error === null,
+      isGeneratingProof: error !== null ? false : get().isGeneratingProof,
+    }),
 
   // ── Compound reset ─────────────────────────────────────────
 

@@ -9,7 +9,7 @@ interface TerminalBoxProps {
   className?: string;
 }
 
-export default function TerminalBox({
+export function TerminalBox({
   title = 'terminal',
   children,
   copyContent,
@@ -89,3 +89,5 @@ export default function TerminalBox({
     </div>
   );
 }
+
+export default TerminalBox;

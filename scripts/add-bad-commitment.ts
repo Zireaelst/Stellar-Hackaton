@@ -1,4 +1,4 @@
-<![CDATA[#!/usr/bin/env npx ts-node
+#!/usr/bin/env npx ts-node
 
 /**
  * StellarVeil — Add Bad Commitment Script
@@ -131,4 +131,4 @@ main().catch((err) => {
   console.error("\n  ✗ Failed:", err.message);
   process.exit(1);
 });
-]]>
+

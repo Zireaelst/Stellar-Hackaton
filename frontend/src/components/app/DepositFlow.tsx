@@ -19,6 +19,7 @@ export function DepositFlow() {
     setNote,
     setTxHash,
     setError,
+    walletAddress,
   } = useStore();
 
   const [isGeneratingNote, setIsGeneratingNote] = useState(false);
@@ -46,7 +47,7 @@ export function DepositFlow() {
     setDepositSuccess(false);
 
     try {
-      const result = await deposit(note.commitment);
+      const result = await deposit(note.commitment, walletAddress!);
       setTxHash(result);
       setDepositSuccess(true);
     } catch (err) {
