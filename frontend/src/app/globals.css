@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ────────────────────────────────────────────────────────────────
+   StellarVeil — Global Design System
+   ──────────────────────────────────────────────────────────────── */
+
+/* ── Base reset ────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: #030508;
+    color: #edf2f7;
+    overflow-x: hidden;
+    position: relative;
+  }
+}
+
+/* ── Ambient glow orbs (position-fixed, behind all content) ──── */
+
+/* Orb 1 — Top-right green */
+body::before {
+  content: '';
+  position: fixed;
+  top: -200px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: rgba(0, 255, 163, 0.04);
+  filter: blur(120px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Orb 2 — Bottom-left blue */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -150px;
+  left: -150px;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.05);
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Orb 3 — Center green (subtle) — applied via a wrapper */
+#__next::before,
+main::before {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: rgba(0, 255, 163, 0.02);
+  filter: blur(160px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Noise texture overlay ─────────────────────────────────────── */
+.noise-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ── Scanlines ─────────────────────────────────────────────────── */
+.scanlines::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.03;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 255, 255, 0.04) 3px,
+    rgba(255, 255, 255, 0.04) 4px
+  );
+}
+
+/* ── Custom scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #030508;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 163, 0.25);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 163, 0.4);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 163, 0.25) #030508;
+}
+
+/* ── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: rgba(0, 255, 163, 0.2);
+  color: #00ffa3;
+}
+
+::-moz-selection {
+  background: rgba(0, 255, 163, 0.2);
+  color: #00ffa3;
+}
+
+/* ── Utility classes ───────────────────────────────────────────── */
+@layer utilities {
+  .text-gradient-green {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-sv-green to-emerald-400;
+  }
+
+  .text-gradient-blue {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-sv-blue to-cyan-400;
+  }
+
+  .border-glow {
+    box-shadow: 0 0 0 1px rgba(0, 255, 163, 0.1),
+                0 0 20px -5px rgba(0, 255, 163, 0.08);
+  }
+
+  .border-glow-active {
+    box-shadow: 0 0 0 1px rgba(0, 255, 163, 0.3),
+                0 0 30px -5px rgba(0, 255, 163, 0.15);
+  }
+
+  .glass {
+    @apply bg-sv-surface/60 backdrop-blur-xl border border-white/[0.04];
+  }
+
+  .glass-elevated {
+    @apply bg-sv-elevated/60 backdrop-blur-xl border border-white/[0.06];
+  }
+}

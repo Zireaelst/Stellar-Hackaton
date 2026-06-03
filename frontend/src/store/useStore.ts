@@ -1,0 +1,305 @@
+/**
+ * StellarVeil — Global State Store (Zustand)
+ *
+ * Single source of truth for wallet connection, deposit/withdraw
+ * flow state, contract data, and UI state.
+ */
+
+import { create } from "zustand";
+import type { Note, ZKProof } from "@/lib/zk";
+
+// ── Types ─────────────────────────────────────────────────────────
+
+export type AppTab = "deposit" | "withdraw" | "compliance" | "explorer";
+
+export type TransactionStatus =
+  | "idle"
+  | "generating-note"
+  | "approving"
+  | "submitting"
+  | "confirming"
+  | "success"
+  | "error";
+
+export type ProofStatus =
+  | "idle"
+  | "generating"
+  | "ready"
+  | "submitting"
+  | "success"
+  | "error";
+
+export interface TransactionRecord {
+  id: string;
+  type: "deposit" | "withdraw";
+  amount: number;
+  commitment: string;
+  txHash: string;
+  timestamp: number;
+  status: "confirmed" | "pending" | "failed";
+}
+
+export interface ContractData {
+  totalLocked: number;
+  depositCount: number;
+  root: string;
+  leaves: string[];
+  badSet: string[];
+  lastUpdated: number;
+}
+
+export interface StoreState {
+  // ── Wallet ──────────────────────────────────────────────────
+  walletAddress: string | null;
+  walletBalance: number;
+  isConnecting: boolean;
+  walletError: string | null;
+
+  // ── Active tab ──────────────────────────────────────────────
+  activeTab: AppTab;
+
+  // ── Deposit flow ────────────────────────────────────────────
+  depositStatus: TransactionStatus;
+  depositError: string | null;
+  currentNote: Note | null;
+  depositTxHash: string | null;
+
+  // ── Withdraw flow ───────────────────────────────────────────
+  withdrawStatus: TransactionStatus;
+  withdrawError: string | null;
+  proofStatus: ProofStatus;
+  proofStep: number;
+  proofStepLabel: string;
+  currentProof: ZKProof | null;
+  recipientAddress: string;
+  withdrawTxHash: string | null;
+
+  // ── Contract data ───────────────────────────────────────────
+  contractData: ContractData;
+  isLoadingContractData: boolean;
+
+  // ── Transaction history ─────────────────────────────────────
+  transactions: TransactionRecord[];
+
+  // ── UI state ────────────────────────────────────────────────
+  showNoteModal: boolean;
+  showSuccessModal: boolean;
+  isMobileMenuOpen: boolean;
+}
+
+export interface StoreActions {
+  // ── Wallet actions ──────────────────────────────────────────
+  setWalletAddress: (address: string | null) => void;
+  setWalletBalance: (balance: number) => void;
+  setIsConnecting: (connecting: boolean) => void;
+  setWalletError: (error: string | null) => void;
+  disconnectWallet: () => void;
+
+  // ── Tab actions ─────────────────────────────────────────────
+  setActiveTab: (tab: AppTab) => void;
+
+  // ── Deposit actions ─────────────────────────────────────────
+  setDepositStatus: (status: TransactionStatus) => void;
+  setDepositError: (error: string | null) => void;
+  setCurrentNote: (note: Note | null) => void;
+  setDepositTxHash: (hash: string | null) => void;
+  resetDeposit: () => void;
+
+  // ── Withdraw actions ────────────────────────────────────────
+  setWithdrawStatus: (status: TransactionStatus) => void;
+  setWithdrawError: (error: string | null) => void;
+  setProofStatus: (status: ProofStatus) => void;
+  setProofStep: (step: number, label: string) => void;
+  setCurrentProof: (proof: ZKProof | null) => void;
+  setRecipientAddress: (address: string) => void;
+  setWithdrawTxHash: (hash: string | null) => void;
+  resetWithdraw: () => void;
+
+  // ── Contract data actions ───────────────────────────────────
+  setContractData: (data: Partial<ContractData>) => void;
+  setIsLoadingContractData: (loading: boolean) => void;
+
+  // ── Transaction history actions ─────────────────────────────
+  addTransaction: (tx: TransactionRecord) => void;
+  updateTransaction: (
+    id: string,
+    updates: Partial<TransactionRecord>
+  ) => void;
+
+  // ── UI actions ──────────────────────────────────────────────
+  setShowNoteModal: (show: boolean) => void;
+  setShowSuccessModal: (show: boolean) => void;
+  setIsMobileMenuOpen: (open: boolean) => void;
+
+  // ── Compound actions ────────────────────────────────────────
+  reset: () => void;
+}
+
+// ── Initial state ─────────────────────────────────────────────────
+
+const initialContractData: ContractData = {
+  totalLocked: 0,
+  depositCount: 0,
+  root: "0".repeat(64),
+  leaves: [],
+  badSet: [],
+  lastUpdated: 0,
+};
+
+const initialState: StoreState = {
+  walletAddress: null,
+  walletBalance: 0,
+  isConnecting: false,
+  walletError: null,
+
+  activeTab: "deposit",
+
+  depositStatus: "idle",
+  depositError: null,
+  currentNote: null,
+  depositTxHash: null,
+
+  withdrawStatus: "idle",
+  withdrawError: null,
+  proofStatus: "idle",
+  proofStep: 0,
+  proofStepLabel: "",
+  currentProof: null,
+  recipientAddress: "",
+  withdrawTxHash: null,
+
+  contractData: { ...initialContractData },
+  isLoadingContractData: false,
+
+  transactions: [],
+
+  showNoteModal: false,
+  showSuccessModal: false,
+  isMobileMenuOpen: false,
+};
+
+// ── Store ─────────────────────────────────────────────────────────
+
+export const useStore = create<StoreState & StoreActions>((set, get) => ({
+  ...initialState,
+
+  // ── Wallet actions ──────────────────────────────────────────
+
+  setWalletAddress: (address) =>
+    set({ walletAddress: address, walletError: null }),
+
+  setWalletBalance: (balance) => set({ walletBalance: balance }),
+
+  setIsConnecting: (connecting) => set({ isConnecting: connecting }),
+
+  setWalletError: (error) =>
+    set({ walletError: error, isConnecting: false }),
+
+  disconnectWallet: () =>
+    set({
+      walletAddress: null,
+      walletBalance: 0,
+      walletError: null,
+      isConnecting: false,
+    }),
+
+  // ── Tab actions ─────────────────────────────────────────────
+
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  // ── Deposit actions ─────────────────────────────────────────
+
+  setDepositStatus: (status) => set({ depositStatus: status }),
+
+  setDepositError: (error) =>
+    set({ depositError: error, depositStatus: error ? "error" : get().depositStatus }),
+
+  setCurrentNote: (note) => set({ currentNote: note }),
+
+  setDepositTxHash: (hash) => set({ depositTxHash: hash }),
+
+  resetDeposit: () =>
+    set({
+      depositStatus: "idle",
+      depositError: null,
+      currentNote: null,
+      depositTxHash: null,
+      showNoteModal: false,
+    }),
+
+  // ── Withdraw actions ────────────────────────────────────────
+
+  setWithdrawStatus: (status) => set({ withdrawStatus: status }),
+
+  setWithdrawError: (error) =>
+    set({
+      withdrawError: error,
+      withdrawStatus: error ? "error" : get().withdrawStatus,
+    }),
+
+  setProofStatus: (status) => set({ proofStatus: status }),
+
+  setProofStep: (step, label) =>
+    set({ proofStep: step, proofStepLabel: label }),
+
+  setCurrentProof: (proof) => set({ currentProof: proof }),
+
+  setRecipientAddress: (address) =>
+    set({ recipientAddress: address }),
+
+  setWithdrawTxHash: (hash) => set({ withdrawTxHash: hash }),
+
+  resetWithdraw: () =>
+    set({
+      withdrawStatus: "idle",
+      withdrawError: null,
+      proofStatus: "idle",
+      proofStep: 0,
+      proofStepLabel: "",
+      currentProof: null,
+      recipientAddress: "",
+      withdrawTxHash: null,
+    }),
+
+  // ── Contract data actions ───────────────────────────────────
+
+  setContractData: (data) =>
+    set((state) => ({
+      contractData: {
+        ...state.contractData,
+        ...data,
+        lastUpdated: Date.now(),
+      },
+    })),
+
+  setIsLoadingContractData: (loading) =>
+    set({ isLoadingContractData: loading }),
+
+  // ── Transaction history actions ─────────────────────────────
+
+  addTransaction: (tx) =>
+    set((state) => ({
+      transactions: [tx, ...state.transactions],
+    })),
+
+  updateTransaction: (id, updates) =>
+    set((state) => ({
+      transactions: state.transactions.map((tx) =>
+        tx.id === id ? { ...tx, ...updates } : tx
+      ),
+    })),
+
+  // ── UI actions ──────────────────────────────────────────────
+
+  setShowNoteModal: (show) => set({ showNoteModal: show }),
+
+  setShowSuccessModal: (show) => set({ showSuccessModal: show }),
+
+  setIsMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
+
+  // ── Compound reset ─────────────────────────────────────────
+
+  reset: () => set({ ...initialState }),
+}));
+
+export default useStore;
